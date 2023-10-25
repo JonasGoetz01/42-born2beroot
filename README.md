@@ -59,24 +59,87 @@ usermod -aG sudo install
 
 ```sh
 sudo apt-get update
-sudo apt-get install ufw
+sudo apt-get install ufw -y
 sudo ufw allow 4242
 sudo ufw enable
+ufw status
 ```
 
 edit `/etc/hostname` and `/etc/hosts` with jgotz42
 
 `sudo visudo` ->
 ```
-Defaults        maxtries=3
-Defaults        badpass_message="Incorrect password attempt. Please try again."
+Defaults        log_input, log_output
+Defaults        logfile=/var/log/sudo/sudo.log
+Defaults        passwd_tries=3
+Defaults        badpass_message="Incorrect password attempt. Please try again. (from jgotz)"
 Defaults        iolog_dir=/var/log/sudo
 Defaults        tty_tickets
 Defaults        secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
 ```
 
 ```sh
+sudo chmod 777 /var/log/sudo/sudo.log
+sudo chmod 777 /var/log/sudo
+```
+
+```sh
+sudo adduser jgotz
+```
+- password: root
+- leave all empty
+
+```sh
+sudo addgroup user42
+```
+
+```sh
 sudo usermod -aG user42,sudo jgotz
+```
+
+```sh
+sudo passwd --expire jgotz
+```
+
+in `/etc/login.defs`
+```
+PASS_MAX_DAYS   30
+PASS_MIN_DAYS   2
+PASS_WARN_AGE   7
+```
+
+```sh
+for user in $(cut -d: -f1 /etc/passwd); do
+    sudo chage -M 30 -m 2 -W 7 $user
+done
+```
+
+- check: `sudo chage -l username`
+
+```sh
+sudo apt install libpam-pwquality -y
+dpkg -l | grep libpam-pwquality
+sudo nano /etc/pam.d/common-password
+```
+
+change line 25:
+```
+password requisite pam_pwquality.so retry=3
+```
+to
+```
+password requisite pam_pwquality.so retry=3 minlen=10 ucredit=-1 dcredit=-1 maxrepeat=3 reject_username difok=7 enforce_for_root
+```
+
+```sh
+sudo passwd --expire jgotz
+passwd
+```
+
+Password: NextTest1.
+
+```sh
+sudo apt-get install -y net-tools
 ```
 
 create `monitoring.sh`
@@ -98,11 +161,12 @@ while true; do
         #User log: $(who | wc -l)
         #Network: IP $(hostname -I | awk '{print $1}') (MAC $(ip link show | awk '/ether/ {print $2}'))
         #Sudo: $(grep -c 'COMMAND' /var/log/sudo/io/*)
-    EOF
-    )
+EOF
+)
     echo "$WALL_MSG" | wall
     sleep 600  # Sleep for 10 minutes
 done
+
 ```
 
 ```sh
@@ -110,29 +174,14 @@ chmod +x monitoring.sh
 ```
 
 ```sh
-crontab -e
+sudo visudo
 ```
-add `@reboot /path/to/monitoring.sh`
+add
+```
+jgotz   ALL=(ALL) NOPASSWD: /usr/local/bin/monitoring.sh
+```
 
 ```sh
-sudo passwd --expire jgotz   # Expire the current password
-sudo chage -M 30 -m 2 -W 7 jgotz  # Set password expiry to 30 days, minimum change interval to 2 days, and warning message 7 days before expiry
+sudo crontab -u root -e
 ```
-
-in `/etc/security/pwquality.conf`
-
-```
-minlen = 10                     # Minimum password length
-dcredit = -1                    # At least one digit
-ucredit = 1                     # At least one uppercase letter
-lcredit = 1                     # At least one lowercase letter
-ocredit = 0                     # No special characters
-maxrepeat = 3                   # No more than 3 consecutive identical characters
-```
-
-in `/etc/pam.d/common-password`
-
-```
-password requisite pam_pwquality.so retry=3 difok=7 minlen=10 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1 reject_username
-
-```
+add `*/10 * * * * /home/jgotz/monitoring.sh`
