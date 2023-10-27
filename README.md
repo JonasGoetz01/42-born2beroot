@@ -185,3 +185,134 @@ jgotz   ALL=(ALL) NOPASSWD: /usr/local/bin/monitoring.sh
 sudo crontab -u root -e
 ```
 add `*/10 * * * * /home/jgotz/monitoring.sh`
+
+
+# Eval
+- check partitions: `lsblk`
+
+Aptitude vs. apt
+- apt is a command line interface to manage software
+- aptitude is a visual interface
+- aptitude is able to fix package conflicts and show the changelogs of all packages, apt not
+
+- check groups and user
+  - `groups jgotz`
+
+create new account:
+- `sudo adduser <username>`
+
+check firewall:
+- `sudo ufw status`
+
+hostname:
+- `cat /etc/hostname && cat /etc/hosts`
+
+- monitoring script
+  - explanation:
+
+  - interrupt:
+    - `sudo crontab -u root -e`
+
+
+TODO:
+- The following rule does not apply to the root password: The password must have
+at least 7 characters that are not part of the former password.
+
+
+Bonus:
+	- install Wordpress:
+```sh
+sudo apt update
+sudo apt upgrade
+sudo apt install mariadb-server -y
+sudo mysql_secure_installation
+```
+
+```sh
+sudo apt install php php-mysql php-curl php-gd php-mbstring php-xml php-xmlrpc php-soap php-intl php-zip -y
+sudo apt install lighttpd -y
+sudo nano /etc/lighttpd/lighttpd.conf
+```
+
+uncomment:
+```
+server.modules += ( "mod_fastcgi", "mod_rewrite" )
+```
+set this:
+```
+server.document-root        = "/var/www/html"
+index-file.names            = ( "index.php", "index.html",
+                                "index.htm", "default.htm",
+                                "index.lighttpd.html" )
+
+fastcgi.server = ( ".php" =>
+                   (( "bin-path" => "/usr/bin/php-cgi",
+                      "socket" => "/tmp/php.socket" ))
+                 )
+```
+
+```sh
+sudo mysql -u root -p
+```
+
+```sql
+CREATE DATABASE wordpressdb;
+CREATE USER 'wordpressuser'@'localhost' IDENTIFIED BY 'password';
+GRANT ALL PRIVILEGES ON wordpressdb.* TO 'wordpressuser'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+```sh
+cd /tmp
+sudo apt install wget -y
+wget https://wordpress.org/latest.tar.gz
+tar xzvf latest.tar.gz
+sudo mv /tmp/wordpress/* /var/www/html/
+```
+
+```sh
+cd /var/www/html/
+sudo apt install php-cgi -y
+sudo cp wp-config-sample.php wp-config.php
+sudo nano wp-config.php
+```
+
+```
+define('DB_NAME', 'wordpressdb');
+define('DB_USER', 'wordpressuser');
+define('DB_PASSWORD', 'password');
+define('DB_HOST', 'localhost');
+```
+
+setup redis cache:
+```sh
+sudo apt install redis-server php-redis -y
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+```
+in `/var/www/html/wp-config.php`
+```
+define('WP_CACHE', true);
+define('WP_REDIS_HOST', '127.0.0.1');
+define('WP_REDIS_PORT', 6379);
+```
+
+```sh
+sudo systemctl restart lighttpd
+sudo systemctl restart redis-server
+```
+
+wordpress username:
+- admin
+- Password123.
+
+check redis:
+- `redis-cli monitor`
+
+
+```sh
+sudo apt install curl -y
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+```
