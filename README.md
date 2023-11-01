@@ -37,6 +37,11 @@
 
 Take snapshot of VM
 
+Partitions check
+`lsblk`
+Get groups of user
+`groups <username>`
+
 ```sh
 apt update && apt full-upgrade -y && apt full-upgrade -y
 apt install openssh-server -y
